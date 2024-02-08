@@ -34,9 +34,6 @@ from concurrent.futures import ThreadPoolExecutor
 from functools import cmp_to_key, partial
 from xml.etree import ElementTree
 
-# Default to StatiXOS Gerrit
-DEFAULT_GERRIT = "https://review.statixos.com"
-
 
 # cmp() is not available in Python 3, define it manually
 # See https://docs.python.org/3.0/whatsnew/3.0.html#ordering-comparisons
@@ -187,6 +184,11 @@ def is_closed(status):
     return status not in ("OPEN", "NEW", "DRAFT")
 
 
+def is_statix_gerrit(remote_url):
+    p = urllib.parse.urlparse(remote_url)
+    return p.hostname == "review.statixos.com"
+
+
 def commit_exists(project_path, revision):
     return (
         subprocess.call(
@@ -289,7 +291,7 @@ def main():
     parser.add_argument(
         "-g",
         "--gerrit",
-        default=DEFAULT_GERRIT,
+        default="https://review.statixos.com",
         metavar="",
         help="Gerrit Instance to use. Form proto://[user@]host[:port]",
     )
@@ -644,8 +646,8 @@ def do_git_fetch_pull(args, item):
         cmd.append("--quiet")
     cmd.extend(["", item["fetch"][method]["ref"]])
 
-    # Try fetching from GitHub first if using default gerrit
-    if args.gerrit == DEFAULT_GERRIT:
+    # Try fetching from GitHub first if using statix gerrit
+    if is_statix_gerrit(args.gerrit):
         if args.verbose:
             print("Trying to fetch the change from GitHub")
 
@@ -658,9 +660,9 @@ def do_git_fetch_pull(args, item):
             return
         print("ERROR: git command failed")
 
-    # If not using the default gerrit or github failed, fetch from gerrit.
+    # If not using the statix gerrit or github failed, fetch from gerrit.
     if args.verbose:
-        if args.gerrit == DEFAULT_GERRIT:
+        if is_statix_gerrit(args.gerrit):
             print(
                 "Fetching from GitHub didn't work, trying to fetch the change from Gerrit"
             )
